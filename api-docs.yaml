@@ -1,0 +1,51 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+tags:
+- name: Pricing Engine
+  description: Leverage dynamic pricing calculation logic and rules to calculate pricing
+    information.
+paths:
+  /api/generatequote:
+    post:
+      tags:
+      - Pricing Engine
+      summary: Generate a Quote for a given Opportunity
+      description: Calculate pricing and generate an associated Quote.
+      operationId: generateQuote
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteGenerationRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/QuoteGenerationResponse"
+components:
+  schemas:
+    QuoteGenerationRequest:
+      type: object
+      properties:
+        opportunityId:
+          type: string
+          description: A record Id for the opportunity
+          example: 0065g00000B9tMP
+      description: "Request to generate a quote, includes the opportunity ID to extract\
+        \ product information"
+    QuoteGenerationResponse:
+      type: object
+      properties:
+        quoteId:
+          type: string
+          description: A record Id for the generated quote
+          example: 0Q05g00000B9tMP
+      description: Response includes the record Id of the generated quote.
