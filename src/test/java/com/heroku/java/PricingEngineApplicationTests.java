@@ -1,4 +1,4 @@
-package com.herokudevrel.agentforce.collageagent;
+package com.heroku.java;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
