@@ -3,8 +3,8 @@ package com.heroku.java.services;
 import com.sforce.soap.partner.PartnerConnection;
 import com.sforce.soap.partner.QueryResult;
 import com.sforce.soap.partner.SaveResult;
+import com.sforce.soap.partner.fault.InvalidFieldFault;
 import com.sforce.soap.partner.sobject.SObject;
-import com.sforce.ws.ConnectionException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,6 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,37 +32,42 @@ public class PricingEngineService {
     @Operation(summary = "Generate a Quote for a given Opportunity", description = "Calculate pricing and generate an associated Quote.")
     @PostMapping("/generatequote")
     public QuoteGenerationResponse generateQuote(
-            @RequestBody QuoteGenerationRequest request, HttpServletRequest httpServletRequest) throws ConnectionException {
+            @RequestBody QuoteGenerationRequest request, HttpServletRequest httpServletRequest) {
 
         PartnerConnection connection = (PartnerConnection) httpServletRequest.getAttribute("salesforcePartnerConnection");
 
-        // Construct SOQL query for Opportunity Products
-        List<String> fields = new ArrayList<>(List.of("Id", "Product2Id", "Quantity", "UnitPrice", "PricebookEntryId"));
-        if (discountOverridesEnabled) {
-            fields.add("DiscountOverride__c");
-        }
-        String soql = String.format(
-            "SELECT %s FROM OpportunityLineItem WHERE OpportunityId = '%s'", 
-            String.join(", ", fields), 
-            request.opportunityId);
-        QueryResult queryResult = connection.query(soql);
-        if (queryResult.getSize() == 0) {
-            throw new RuntimeException("No OpportunityLineItems found for Opportunity: " + request.opportunityId);
-        }
+        try {
+            // Construct SOQL query for Opportunity Products
+            List<String> fields = new ArrayList<>(List.of("Id", "Product2Id", "Quantity", "UnitPrice", "PricebookEntryId"));
+            if (discountOverridesEnabled) {
+                fields.add("DiscountOverride__c");
+            }
+            String soql = String.format(
+                "SELECT %s FROM OpportunityLineItem WHERE OpportunityId = '%s'", 
+                String.join(", ", fields), 
+                request.opportunityId);
+            QueryResult queryResult = connection.query(soql);
+            if (queryResult.getSize() == 0) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                    "No OpportunityLineItems found for Opportunity ID: " + request.opportunityId);
+            }
 
-        // Default discount rate based on region
-        double discountRate = getDiscountForRegion("US"); // Hardcoded region logic for demo
+            // Default discount rate based on region
+            double discountRate = getDiscountForRegion("US"); // Hardcoded region logic for demo
 
-        // Create Quote
-        SObject quote = new SObject("Quote");
-        quote.setField("Name", "New Quote");
-        quote.setField("OpportunityId", request.opportunityId);
-        SObject[] quoteRecords = new SObject[]{quote};
-        SaveResult[] quoteSaveResults = connection.create(quoteRecords);
-        QuoteGenerationResponse response = new QuoteGenerationResponse();
-        if (quoteSaveResults[0].isSuccess()) {
+            // Create Quote
+            SObject quote = new SObject("Quote");
+            quote.setField("Name", "New Quote");
+            quote.setField("OpportunityId", request.opportunityId);
+            SObject[] quoteRecords = new SObject[]{quote};
+            SaveResult[] quoteSaveResults = connection.create(quoteRecords);
+            if (!quoteSaveResults[0].isSuccess()) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
+                    "Failed to create Quote: " + quoteSaveResults[0].getErrors()[0].getMessage());
+            }
             String quoteId = quoteSaveResults[0].getId();
             logger.info("Quote created with ID: " + quoteId);
+            QuoteGenerationResponse response = new QuoteGenerationResponse();
             response.quoteId = quoteId;
             // Prepare QuoteLineItems in bulk
             List<SObject> quoteLineItems = new ArrayList<>();
@@ -85,14 +93,22 @@ public class PricingEngineService {
             SaveResult[] quoteLineSaveResults = connection.create(quoteLineItems.toArray(new SObject[0]));
             for (SaveResult saveResult : quoteLineSaveResults) {
                 if (!saveResult.isSuccess()) {
-                    throw new RuntimeException("Failed to create QuoteLineItem: " + saveResult.getErrors()[0].getMessage());
+                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
+                        "Failed to create QuoteLineItem: " + saveResult.getErrors()[0].getMessage());
                 }
             }
-        } else {
-            throw new RuntimeException("Failed to create Quote: " + quoteSaveResults[0].getErrors()[0].getMessage());
+            return response;
+        } catch (InvalidFieldFault e) {
+            logger.error("Salesforce connection error: {}", e.getExceptionMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 
+                "Unable to connect to Salesforce: " + e.getExceptionMessage());
+        } catch (ResponseStatusException e) {
+            throw e; // Preserve custom errors with detailed messages
+        } catch (Exception e) {
+            logger.error("Unexpected error generating quote: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
+                "An unexpected error occurred: " + e.getMessage());
         }
-
-        return response;
     }
 
     private double getDiscountForRegion(String region) {

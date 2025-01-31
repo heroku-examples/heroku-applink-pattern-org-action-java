@@ -137,7 +137,7 @@ First lets understand the behavior without elevated permissions when the code tr
 ENABLE_DISCOUNT_OVERRIDES=True
 ```
 
-Use the `invoke.sh` script to attempt to generate a new **Quote**. The request will fail with a `500` and you will see in the console output the following error:
+Use the `invoke.sh` script to attempt to generate a new **Quote**. The request will fail with a `503` and you will see in the console output the following error:
 
 ```
 No such column 'DiscountOverride__c' on entity 'OpportunityLineItem'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.'
