@@ -86,7 +86,7 @@ Navigate to your orgs **Setup** menu and search for **Heroku** then click **Apps
 
 ### Invoking from Apex
 
-Now that you have imported your Heroku application. The following shows an Apex code fragment the demonstrates how to invoke your code in an synchronous manner (waits for response). At present this Java sample does not support asynchronous invocation, please consult the Node version for this. Make sure to change the **Opportunity Id** `006am000006pS6P` below to a valid **Opportunity** from your org (see above).
+Now that you have imported your Heroku application. The following shows an Apex code fragment the demonstrates how to invoke your code in an synchronous manner (waits for response). Make sure to change the **Opportunity Id** `006am000006pS6P` below to a valid **Opportunity** from your org (see above).
 
 ```
 echo \
@@ -187,6 +187,7 @@ Consult the more in-depth Heroku and Agentforce Tutorial [here](https://github.c
 ## Technical Information
 - The pricing engine logic is implemented in the `PricingEngineSevice.java` source file, under the `/src` directory. It demonstrates how to query and insert records into Salesforce.
 - The `api-docs.yaml` file is not automatically refreshed. If you change the request or response of your code this needs to be updated before importing into Salesforce. To do this, when developing locally navigate to `http://localhost:8080/v3/api-docs.yaml` to download the latest generated version. It is feasible to automate this process with a shell script that wraps the `heroku salesforce:import` command to avoid maintaining this file.
+- At present this Java sample does not support asynchronous invocation, please consult the Node version for this.
 - The [Salesforce WSC Java](https://github.com/forcedotcom/wsc) client is used to simplify API communications with the org, this is initialized in the Spring Boot filter, `SalesforceClientContextFilter.java` by decoding information within the `x-client-context` HTTP header. The code accesses this via `PartnerConnection connection = (PartnerConnection) httpServletRequest.getAttribute("salesforcePartnerConnection");`. The HTTP header `x-client-context` will be documented more fully in the future, please consult this sample code in the meantime.
 - Source code for configuration/metadata deployed to Salesforce can be found in the `/src-org` directory.
 - Requests in this type of Heroku application are being managed by a web process that implements a strict timeout as described [here](https://devcenter.heroku.com/articles/request-timeout) you will see errors in the Apex debug logs only. If you are hitting this limit consult the [Scaling Batch Jobs with Heroku - Java](https://github.com/heroku-examples/heroku-integration-pattern-org-job-java) sample.
