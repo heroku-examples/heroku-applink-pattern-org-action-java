@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +23,9 @@ public class PricingEngineService {
 
     private static final Logger logger = LoggerFactory.getLogger(PricingEngineService.class);
 
+    @Value("${ENABLE_DISCOUNT_OVERRIDES:#{false}}")
+    private Boolean discountOverridesEnabled;
+
     @Operation(summary = "Generate a Quote for a given Opportunity", description = "Calculate pricing and generate an associated Quote.")
     @PostMapping("/generatequote")
     public QuoteGenerationResponse generateQuote(
@@ -29,14 +33,21 @@ public class PricingEngineService {
 
         PartnerConnection connection = (PartnerConnection) httpServletRequest.getAttribute("salesforcePartnerConnection");
 
-        // Fetch OpportunityLineItems
-        String soql = String.format("SELECT Id, Product2Id, Quantity, UnitPrice, PricebookEntryId FROM OpportunityLineItem WHERE OpportunityId = '%s'", request.opportunityId);
+        // Construct SOQL query for Opportunity Products
+        List<String> fields = new ArrayList<>(List.of("Id", "Product2Id", "Quantity", "UnitPrice", "PricebookEntryId"));
+        if (discountOverridesEnabled) {
+            fields.add("DiscountOverride__c");
+        }
+        String soql = String.format(
+            "SELECT %s FROM OpportunityLineItem WHERE OpportunityId = '%s'", 
+            String.join(", ", fields), 
+            request.opportunityId);
         QueryResult queryResult = connection.query(soql);
         if (queryResult.getSize() == 0) {
             throw new RuntimeException("No OpportunityLineItems found for Opportunity: " + request.opportunityId);
         }
 
-        // Generate a Quote with a simple discount logic
+        // Default discount rate based on region
         double discountRate = getDiscountForRegion("US"); // Hardcoded region logic for demo
 
         // Create Quote
@@ -55,7 +66,14 @@ public class PricingEngineService {
             for (SObject record : queryResult.getRecords()) {
                 double quantity = Double.parseDouble(record.getField("Quantity").toString());
                 double unitPrice = Double.parseDouble(record.getField("UnitPrice").toString());
-                double discountedPrice = (quantity * unitPrice) * (1 - discountRate);
+                // Use DiscountOverride__c if available and enabled
+                double effectiveDiscountRate = discountRate;
+                if (discountOverridesEnabled && record.getField("DiscountOverride__c") != null) {
+                    effectiveDiscountRate = Double.parseDouble(record.getField("DiscountOverride__c").toString()) / 100.0;
+                }
+                // Calculate discount price
+                double discountedPrice = (quantity * unitPrice) * (1 - effectiveDiscountRate);
+                // Build record to insert
                 SObject quoteLineItem = new SObject("QuoteLineItem");
                 quoteLineItem.setField("QuoteId", quoteId);
                 quoteLineItem.setField("PricebookEntryId", record.getField("PricebookEntryId"));
