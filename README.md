@@ -86,7 +86,7 @@ Navigate to your orgs **Setup** menu and search for **Heroku** then click **Apps
 
 ### Invoking from Apex
 
-Now that you have imported your Heroku application. The following shows an Apex code fragment the demonstrates how invoke it in an synchronous manner (waits for response). At present this Java sample does not support asynchronous invocation, please consult the Node version for this. Make sure to change the **Opportunity Id** `006am000006pS6P` below to a valid **Opportunity** from your org (see above).
+Now that you have imported your Heroku application. The following shows an Apex code fragment the demonstrates how to invoke your code in an synchronous manner (waits for response). At present this Java sample does not support asynchronous invocation, please consult the Node version for this. Make sure to change the **Opportunity Id** `006am000006pS6P` below to a valid **Opportunity** from your org (see above).
 
 ```
 echo \
