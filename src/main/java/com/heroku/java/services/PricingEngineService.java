@@ -98,16 +98,12 @@ public class PricingEngineService {
                 }
             }
             return response;
-        } catch (InvalidFieldFault e) {
-            logger.error("Salesforce connection error: {}", e.getExceptionMessage());
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 
-                "Unable to connect to Salesforce: " + e.getExceptionMessage());
         } catch (ResponseStatusException e) {
             throw e; // Preserve custom errors with detailed messages
         } catch (Exception e) {
-            logger.error("Unexpected error generating quote: {}", e.getMessage());
+            logger.error("Unexpected error generating quote: {}", e.toString());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
-                "An unexpected error occurred: " + e.getMessage());
+                "An unexpected error occurred: " + e.toString());
         }
     }
 
