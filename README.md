@@ -128,6 +128,7 @@ Authenticated connections passed to your code are created with the user identity
 If you have not done so, run the above command `sf project deploy` to deploy additional metadata to your Salesforce org. In addition to the Flow, this also deployed a new custom field on the `OpportunityLineItem` called `DiscountOveride__c`. A special field that only sales leaders would have access to completly override the discount calculations in the pricing engine if desired. Since its not then the case that all users have access to this field, in order to allow only the code to acccess this field we are going to have elevate its permissions.
 
 First lets understand the behavior of our code without elevated permissions. Create a `.env` file with the following entry and rerun the application locally using `mvn spring-boot:run`.
+
 ```
 ENABLE_DISCOUNT_OVERRIDES=True
 ```
@@ -136,6 +137,8 @@ Use the `invoke.sh` script to attempt to generate a new *Qoute*. The request wil
 ```
 No such column 'DiscountOverride__c' on entity 'OpportunityLineItem'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.'
 ```
+
+Replicate this situation with your deployed code, by using 
 
 ## Invoking from Agentforce
 
