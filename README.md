@@ -162,7 +162,8 @@ Now that this has been deployed, the **Heroku Integration** add-on automatically
 
 When running developing and testing locally the `invoke.sh` can take a third argument to emulate the above deployed behavior. Also note that at time of writing, during the Pilot, **Flow** and **Agentforce** invocation with elevated permissions is not supported and returns an error.
 
-> [!NOTE] Your developer user needs permissions to assign session based permission sets required by the `invoke.sh` script. Before running the above command assign this permission using `sf org assign permset --name GenerateQuoteAuthorization -o my-org`. You need only run it once. 
+> [!NOTE]
+> Your developer user needs permissions to assign session based permission sets required by the `invoke.sh` script. Before running the above command assign this permission using `sf org assign permset --name GenerateQuoteAuthorization -o my-org`. You need only run it once. 
 
 ```
 ./bin/invoke.sh my-org '{"opportunityId": "006am000006pS6P"}' GenerateQuoteAuthorization
