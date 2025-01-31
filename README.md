@@ -93,14 +93,14 @@ echo \
 "ExternalService.GenerateQuote_QuoteGenerationRequest body = new ExternalService.GenerateQuote_QuoteGenerationRequest();" \
 "body.opportunityId = '006am000006pS6P';" \
 "request.body = body;" \
-"System.debug(service.generateQuote(request).Code200.quoteId);" \
+"System.debug('Quote Id: ' + service.generateQuote(request).Code200.quoteId);" \
 | sf apex run -o my-org
 ```
 
 Inspect the debug log output sento to the console and you should see the generted Quote ID output as follows:
 
 ```
-07:56:11.212 (3213672014)|USER_DEBUG|[1]|DEBUG|0Q0am000000nRS5CAM
+07:56:11.212 (3213672014)|USER_DEBUG|[1]|DEBUG|Quote Id: 0Q0am000000nRS5CAM
 ```
 
 ### Invoking from Flow
@@ -152,21 +152,42 @@ sf project deploy start --metadata PermissionSet -o my-org
 sf org assign permset --name GenerateQuoteAuthorization -o my-org
 ```
 
-Now that this has been deployed, the **Heroku Integration** add-on automatically detects it and adds it to the users own permissions while executing the code - hence permissions are now elevated. To test this rerun the code using Apex invocation examples above and you should now find that a Quote is now successfully created. You can experiment with putting values in this new field, the sample code does respond accordingly. 
+Now that this has been deployed, the **Heroku Integration** add-on automatically detects it and adds it to the users own permissions while executing the code - hence permissions are now elevated. To test this rerun the code using Apex invocation examples above and you should now find that a **Quote** is now successfully created as evident from the console output per the example below.
 
 ```
+07:56:11.212 (3213672014)|USER_DEBUG|[1]|DEBUG|Quote Id: 0Q0am000000nRS5CAM
+```
+
+When running developering and testing locally the `invoke.sh` can take a third argument to emulate the above deployed behavior. Also note that at time of writing, during the Pilot, **Flow** and **Agentforce** invocation with elevated permissions is not supported and returns an error.
+
+> [!NOTE] Your developer user needs permissions to assign session based permission sets required by the `invoke.sh` script. Before running the above command assign this permission using `sf org assign permset --name GenerateQuoteAuthorization -o my-org`. You need only run it once. 
+
+```
+./bin/invoke.sh my-org '{"opportunityId": "006am000006pS6P"}' GenerateQuoteAuthorization
+```
+
+The above `invoke.sh` now outputs additional information confirming the elevation:
+
+```
+Activating session-based permission set: GenerateQuoteAuthorization...
+Session-based permission set activated. Activation ID: 5Paam00000O6m16CAB
 Response from server:
-{"quoteId":"0Q0am000000nRLdCAM"}
+{"quoteId":"0Q0am000000nSZRCA2"}
+Deactivating session-based permission set: GenerateQuoteAuthorization...
+Session-based permission set deactivated successfully.
 ```
-
-> ![NOTE] When running locally the `invoke.sh` can take a third argument to emulate this behavior allowing you to develop locally when leveraging permission elevation. Also note that at time of writing **Flow** invocation with elevated permissions is not supported and returns an error.
 
 ## Invoking from Agentforce
 
-bla bla 
+Consult the more indepth Heroku and Agentforce Tutorial [here](https://github.com/heroku-examples/heroku-agentforce-tutorial/tree/heroku-integration-pilot). 
 
 ## Technical Information
-- 
+- The pricing engine logic is implemented in the `PricingEngineSevice.java` source file, under the `/src` directory. It demonstrates how to query and insert records into Salesforce.
+- The `api-docs.yaml` file is not automatically refreshed. If you change the request or response of your code this needs to be updated before importing into Salesforce. To do this, when developing locally navigate to `http://localhost:8080/v3/api-docs.yaml` to download the latest generated version. It is feasible to automate this process with a shell script that wraps the `heroku salesforce:import` command to avoid maintaining this file.
+- The [Salesforce WSC Java](https://github.com/forcedotcom/wsc) client is used to simplify API communciations with the org, this is initialized in the Spring Boot filter, `SalesforceClientContextFilter.java` by decoding information within the `x-client-context` HTTP header. This HTTP header will be documented more fully in the future, please consult this sample code in the meantime.
+- Source code for configuraiton/metadata deployed to Salesforce can be found in the `/src-org` directory.
+- Requests in this type of Heroku application are being managed by a web process that implements a strict timeout as described [here](https://devcenter.heroku.com/articles/request-timeout) you will see errors in the Apex debug logs only. If you are hitting this limit consult the [Scaling Batch Jobs with Heroku - Java](https://github.com/heroku-examples/heroku-integration-pattern-org-job-java) sample.
+- Per the **Heroku Integration** add-on documentation and steps above, the service mesh buildpack must be installed to enable authenticated connections to be intercepted and be passed through to your code. To configure this the `Procfile` and Java Spring boot, `server.port` configuration has been updated (see `applicaiton.properities`).
 
 ## Other Samples
 
