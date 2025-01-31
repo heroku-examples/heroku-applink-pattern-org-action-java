@@ -3,7 +3,6 @@ package com.heroku.java.services;
 import com.sforce.soap.partner.PartnerConnection;
 import com.sforce.soap.partner.QueryResult;
 import com.sforce.soap.partner.SaveResult;
-import com.sforce.soap.partner.fault.InvalidFieldFault;
 import com.sforce.soap.partner.sobject.SObject;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
