@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# Check if both org alias and opportunity ID are provided as arguments
+# Check if required arguments are provided
 if [ -z "$1" ] || [ -z "$2" ]; then
-    echo "Usage: $0 <salesforce-org-alias> <opportunity-id>"
+    echo "Usage: $0 <salesforce-org-alias> <payload-json>"
     exit 1
 fi
 
 # Set variables from script arguments
 SF_ORG_ALIAS="$1"
-OPPORTUNITY_ID="$2"
+PAYLOAD_JSON="$2"
 
 # Fetch Salesforce org details using the Salesforce CLI
 SF_ORG_INFO=$(sf org display -u "$SF_ORG_ALIAS" --json 2>/dev/null)
@@ -52,22 +52,14 @@ EOF
 # Encode the JSON into Base64
 ENCODED_CLIENT_CONTEXT=$(echo -n "$CLIENT_CONTEXT_JSON" | base64)
 
-# Define the request payload using the provided Opportunity ID
-REQUEST_PAYLOAD=$(cat <<EOF
-{
-  "opportunityId": "$OPPORTUNITY_ID"
-}
-EOF
-)
-
-# Define the API URL (update port if needed)
+# Define the API URL
 API_URL="http://localhost:8080/api/generatequote"
 
 # Make the request
 RESPONSE=$(curl -s -X POST "$API_URL" \
   -H "Content-Type: application/json" \
   -H "x-client-context: $ENCODED_CLIENT_CONTEXT" \
-  -d "$REQUEST_PAYLOAD")
+  -d "$PAYLOAD_JSON")
 
 # Print response
 echo "Response from server:"

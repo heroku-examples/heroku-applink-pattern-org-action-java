@@ -30,7 +30,7 @@ mvn spring-boot:run
 In a new terminal window run the following command substituing `006am000006pS6P` for a valid **Opportunity Id** record from your Salesforce org, ensuring you identify an **Opportunity** that also has related **Product** line items.
 
 ```
-./bin/invoke.sh my-org 006am000006pS6P
+./bin/invoke.sh my-org '{"opportunityId": "006am000006pS6P"}'
 ```
 
 You should see the following output:
@@ -112,7 +112,7 @@ Salesforce Flow is the primary no code automation tool within Salesforce orgs an
 To test invoking your code from Flow, deploy a simple Flow using the command below:
 
 ```
-sf project deploy start --source-dir src-org -o my-org
+sf project deploy start --metadata Flow -o my-org
 ```
 
 Open the Flow called **Generate Quote Test** and click the **Debug** button entering a valid **Opportunity Id**. Once the Flow completes inspect the contents of the output variable and you should see the now familar **Quote Id** present. 
@@ -121,24 +121,45 @@ Open the Flow called **Generate Quote Test** and click the **Debug** button ente
 
 The Flow used here is a very basic Autolaunched Flow, however you can use this approach in other Flow types such as Screen Flows as well - allowing you to build user experiences around your Heroku applications with Flow for example.
 
-## Permissions and Permission Elevation
+## Permissions and Permission Elevation (Optional Advanced Topic)
 
 Authenticated connections passed to your code are created with the user identity of the user that directly or indirectly causes a given Apex, Flow, or Agentforce operation to invoke your code. As such, in contrast to Apex, your code always accesses org data in the more secure User mode (only the permissions granted to the user), not System mode (access to all data). This favors the more secure coding convention of the principle of least privilege. If your code needs to access or manipulate information not visible to the user, you must use the approach described here to elevate permissions.
 
-If you have not done so, run the above command `sf project deploy` to deploy additional metadata to your Salesforce org. In addition to the Flow, this also deployed a new custom field on the `OpportunityLineItem` called `DiscountOveride__c`. A special field that only sales leaders would have access to completly override the discount calculations in the pricing engine if desired. Since its not then the case that all users have access to this field, in order to allow only the code to acccess this field we are going to have elevate its permissions.
+For this part of the sample we expand the code logic to detect a discount override field that only sales leaders would have access to. This field completly overrides the discount calculations for some opportunity product lines. Since by design not all users should have access to this field, in order to allow only the code to acccess this field it is neccessary to configure elevated permissions. Run the command below to deploy a new custom field on the `OpportunityLineItem` called `DiscountOverride__c`. 
 
-First lets understand the behavior of our code without elevated permissions. Create a `.env` file with the following entry and rerun the application locally using `mvn spring-boot:run`.
+```
+sf project deploy start --metadata CustomObject:OpportunityLineItem -o my-org
+```
+
+First lets understand the behavior without elevated permissions when the code tries to access this field with only the permissions of the user. Create a `.env` file in the root of the project with the following contents and then rerun the application locally using `mvn spring-boot:run` as described earlier.
 
 ```
 ENABLE_DISCOUNT_OVERRIDES=True
 ```
-Use the `invoke.sh` script to attempt to generate a new *Qoute*. The request will fail with a `500` and you will see in the console log is the following error:
+
+Use the `invoke.sh` script to attempt to generate a new **Quote**. The request will fail with a `500` and you will see in the console output the following error:
 
 ```
 No such column 'DiscountOverride__c' on entity 'OpportunityLineItem'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names.'
 ```
 
-Replicate this situation with your deployed code, by using 
+Replicate this situation with your deployed code, by enabling discount overrides using `heroku config:set ENABLE_DISCOUNT_OVERRIDES=True`. Retry with the Apex invocation example above while monitoring the Heroku logs using `heroku logs -t`. Once again in the Heroku debug logs you will see the above error. This is because your user does not have access to the `DiscountOverride__c` field - per our scenario above this is a valid use case.
+
+In order to elevate just the permissions of your code to access this field and not that of the user, an additional **Permission Set** is needed. This Permission Set contains only additional permissions the code needs - in this case access to the `DiscountOverride__c` field. The following command deploys a permission set called `GenerateQuoteAuthorization` that contains this permission. Note this permission set is defined as requiring session activation to be active, this temporary activation is handled by the Heorku Integration add-on for you. However it must still be assigned to a user and must following the naming convention of `[yourapplication]Authorization` for the **Heroku Integration** add-on to detect it.
+
+```
+sf project deploy start --metadata PermissionSet -o my-org
+sf org assign permset --name GenerateQuoteAuthorization -o my-org
+```
+
+Now that this has been deployed, the **Heroku Integration** add-on automatically detects it and adds it to the users own permissions while executing the code - hence permissions are now elevated. To test this rerun the code using Apex invocation examples above and you should now find that a Quote is now successfully created. You can experiment with putting values in this new field, the sample code does respond accordingly. 
+
+```
+Response from server:
+{"quoteId":"0Q0am000000nRLdCAM"}
+```
+
+> ![NOTE] When running locally the `invoke.sh` can take a third argument to emulate this behavior allowing you to develop locally when leveraging permission elevation. Also note that at time of writing **Flow** invocation with elevated permissions is not supported and returns an error.
 
 ## Invoking from Agentforce
 
