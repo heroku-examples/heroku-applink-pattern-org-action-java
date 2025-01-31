@@ -6,7 +6,7 @@ Heroku Integration - Extending Apex, Flow and Agentforce - Java
 
 This sample demonstrates importing a Heroku application into an org to enable Apex, Flow, and Agentforce to call out to Heroku. For Apex, both synchronous and asynchronous invocation are demonstrated, along with securely elevating Salesforce permissions for processing that requires additional object or field access.
 
-<img src="images/overview.jpg" width="50%" alt="Flow">
+<img src="images/overview.jpg" width="80%" alt="Flow">
 
 The scenario used in this sample illustrates a basis for performing complex compute calculations over Salesforce **Opportunity** data and storing the result back in Salesforce as a **Quote**. Calculating Quote information from Opportunities can become quite intensive, especially when large multinational businesses have complex rules that impact pricing related to region, products, and discount thresholds. It's also possible that such code already exists, and there is a desire to reuse it within a Salesforce context.
 
