@@ -6,18 +6,21 @@ Heroku Integration - Extending Apex, Flow and Agentforce - Java
 
 This sample demonstrates importing a Heroku application into an org to enable Apex, Flow, and Agentforce to call out to Heroku. For Apex, both synchronous and asynchronous invocation are demonstrated, along with securely elevating Salesforce permissions for processing that requires additional object or field access.
 
+# Architecture Overview
+
+The scenario used in this sample illustrates a basis for performing complex compute calculations over Salesforce **Opportunity** data and storing the result back in Salesforce as a **Quote**. Calculating Quote information from Opportunities can become quite intensive, especially when large multinational businesses have complex rules that impact pricing related to region, products, and discount thresholds. It's also possible that such code already exists, and there is a desire to reuse it within a Salesforce context. In this sample, you'll learn the basics of importing Heroku applications into Salesforce orgs and calling them from **Flow**, **Apex**, and **Agentforce**.
+
 <img src="images/overview.jpg" width="80%" alt="Flow">
 
-The scenario used in this sample illustrates a basis for performing complex compute calculations over Salesforce **Opportunity** data and storing the result back in Salesforce as a **Quote**. Calculating Quote information from Opportunities can become quite intensive, especially when large multinational businesses have complex rules that impact pricing related to region, products, and discount thresholds. It's also possible that such code already exists, and there is a desire to reuse it within a Salesforce context.
 
-Requirements
-------------
+# Requirements
 - Heroku login
 - Heroku Integration Pilot enabled
 - Heroku CLI installed
-- Heroku Integration Pilot CLI installed
+- Heroku Integration Pilot CLI plugin is installed
 - Salesforce CLI installed
 - Login information for one or more Scratch, Development or Sandbox orgs
+- Watch the [Introduction to the Heroku Integration Pilot for Developers](https://www.youtube.com/watch?v=T5kOGNuTCLE) video 
 
 ## Local Development and Testing
 
