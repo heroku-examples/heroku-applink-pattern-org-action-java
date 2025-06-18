@@ -47,6 +47,7 @@ public class PricingEngineService {
                 request.opportunityId);
             logger.info("Constructed SOQL " + soql);
             QueryResult queryResult = connection.query(soql);
+            logger.info("SOQL Response " + queryResult.getSize());                
             if (queryResult.getSize() == 0) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, 
                     "No OpportunityLineItems found for Opportunity ID: " + request.opportunityId);
@@ -98,8 +99,6 @@ public class PricingEngineService {
                 }
             }
             return response;
-        } catch (ResponseStatusException e) {
-            throw e; // Preserve custom errors with detailed messages
         } catch (Exception e) {
             logger.info("Unexpected error generating quote: {}", e.toString());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
