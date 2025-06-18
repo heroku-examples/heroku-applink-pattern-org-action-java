@@ -1,8 +1,5 @@
-Heroku Integration - Extending Apex, Flow and Agentforce - Java
-===============================================================
-
-> [!IMPORTANT]
-> For use with the Heroku Integration and Heroku Eventing pilots only
+Heroku AppLink - Extending Apex, Flow and Agentforce - Java
+===========================================================
 
 This sample demonstrates importing a Heroku application into an org to enable Apex, Flow, and Agentforce to call out to Heroku. For Apex, both synchronous and asynchronous invocation are demonstrated, along with securely elevating Salesforce permissions for processing that requires additional object or field access.
 
@@ -59,13 +56,14 @@ git push heroku main
 Next install and configure the Heroku Integration add-on:
 
 ```
-heroku addons:create heroku-integration
-heroku buildpacks:add https://github.com/heroku/heroku-buildpack-heroku-integration-service-mesh
-heroku salesforce:connect my-org --store-as-run-as-user
-heroku salesforce:import api-docs.yaml --org-name my-org --client-name GenerateQuote
+heroku addons:create heroku-applink
+heroku buildpacks:add --index=1 heroku/heroku-applink-service-mesh
+heroku config:set HEROKU_APP_ID="$(heroku apps:info --json | jq -r '.app.id')"
+heroku salesforce:connect my-org
+heroku salesforce:publish api-docs.yaml --client-name GenerateQuote --connection-name my-org --authorization-connected-app-name GenerateQuoteConnectedApp --authorization-permission-set-name GenerateQuotePermissions
 ```
 
-Trigger an application rebuild to install the Heroku Integration buildpack
+Trigger an application rebuild to install the Heroku AppLink buildpack
 
 ```
 git commit --allow-empty -m "empty commit"
@@ -93,14 +91,25 @@ Now that you have imported your Heroku application. The following shows an Apex 
 
 ```
 echo \
-"ExternalService.GenerateQuote service = new ExternalService.GenerateQuote();" \
-"ExternalService.GenerateQuote.generateQuote_Request request = new ExternalService.GenerateQuote.generateQuote_Request();" \
-"ExternalService.GenerateQuote_QuoteGenerationRequest body = new ExternalService.GenerateQuote_QuoteGenerationRequest();" \
-"body.opportunityId = '006am000006pS6P';" \
+"HerokuAppLink.GenerateQuote service = new HerokuAppLink.GenerateQuote();" \
+"HerokuAppLink.GenerateQuote.generateQuote_Request request = new HerokuAppLink.GenerateQuote.generateQuote_Request();" \
+"HerokuAppLink.GenerateQuote_QuoteGenerationRequest body = new HerokuAppLink.GenerateQuote_QuoteGenerationRequest();" \
+"body.opportunityId = '006SB00000DETNg';" \
 "request.body = body;" \
 "System.debug('Quote Id: ' + service.generateQuote(request).Code200.quoteId);" \
 | sf apex run -o my-org
 ```
+
+```
+echo \
+"HerokuAppLink.GenerateQuote service = new HerokuAppLink.GenerateQuote();" \
+"HerokuAppLink.GenerateQuote.generateQuote_Request request = new HerokuAppLink.GenerateQuote.generateQuote_Request();" \
+"HerokuAppLink.GenerateQuote_QuoteGenerationRequest body = new HerokuAppLink.GenerateQuote_QuoteGenerationRequest();" \
+"request.body = body;" \
+"System.debug('Quote Id: ' + service.generateQuote(request));" \
+| sf apex run -o my-ga-test-org2
+```
+
 
 Inspect the debug log output sent to to the console and you should see the generated Quote ID output as follows:
 
@@ -188,6 +197,7 @@ Session-based permission set deactivated successfully.
 Consult the more in-depth Heroku and Agentforce Tutorial [here](https://github.com/heroku-examples/heroku-agentforce-tutorial/tree/heroku-integration-pilot). 
 
 ## Technical Information
+- The Spring Boot class `OpenAPIConfig` has been used to inject additional Saleforce configuration for each operation exposed. This aligns with the names of the Connected App and Permission Sets used when using the `salesforce:publish` command above.
 - The pricing engine logic is implemented in the `PricingEngineSevice.java` source file, under the `/src` directory. It demonstrates how to query and insert records into Salesforce.
 - The `api-docs.yaml` file is not automatically refreshed. If you change the request or response of your code this needs to be updated before importing into Salesforce. To do this, when developing locally navigate to `http://localhost:8080/v3/api-docs.yaml` to download the latest generated version. It is feasible to automate this process with a shell script that wraps the `heroku salesforce:import` command to avoid maintaining this file.
 - At present this Java sample does not support asynchronous invocation, please consult the Node version for this.
