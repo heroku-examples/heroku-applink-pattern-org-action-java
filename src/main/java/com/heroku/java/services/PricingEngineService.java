@@ -45,6 +45,7 @@ public class PricingEngineService {
                 "SELECT %s FROM OpportunityLineItem WHERE OpportunityId = '%s'", 
                 String.join(", ", fields), 
                 request.opportunityId);
+            logger.info("Constructed SOQL " + soql);
             QueryResult queryResult = connection.query(soql);
             if (queryResult.getSize() == 0) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, 
