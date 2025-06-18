@@ -48,26 +48,17 @@ You can now also view the **Quote** by refreshing the **Opportunity** page withi
 
 To test from Apex, Flow and other tools within your Salesforce org you must deploy the code and import it into your org. The following commands create a Heroku application and configure the Heroku Integration add-on. This add-on and associated buildpack allows secure authenticated access from within your code and visibility of your code from Apex, Flow and Agentforce. After this configuration, code is not accessible from the public internet, only from within an authorized Salesforce org.
 
-```
-heroku create
-git push heroku main
-```
-
 Next install and configure the Heroku Integration add-on:
 
 ```
+heroku create
 heroku addons:create heroku-applink
 heroku buildpacks:add --index=1 heroku/heroku-applink-service-mesh
+heroku buildpacks:add heroku/java
 heroku config:set HEROKU_APP_ID="$(heroku apps:info --json | jq -r '.app.id')"
+git push heroku main
 heroku salesforce:connect my-org
 heroku salesforce:publish api-docs.yaml --client-name GenerateQuote --connection-name my-org --authorization-connected-app-name GenerateQuoteConnectedApp --authorization-permission-set-name GenerateQuotePermissions
-```
-
-Trigger an application rebuild to install the Heroku AppLink buildpack
-
-```
-git commit --allow-empty -m "empty commit"
-git push heroku main
 ```
 
 Once imported grant permissions to users to invoke your code using the following `sf` command:
@@ -109,7 +100,6 @@ echo \
 "System.debug('Quote Id: ' + service.generateQuote(request));" \
 | sf apex run -o my-ga-test-org2
 ```
-
 
 Inspect the debug log output sent to to the console and you should see the generated Quote ID output as follows:
 
@@ -159,14 +149,14 @@ No such column 'DiscountOverride__c' on entity 'OpportunityLineItem'. If you are
 
 Replicate this situation with your deployed code, by enabling discount overrides using `heroku config:set ENABLE_DISCOUNT_OVERRIDES=True`. Retry with the Apex invocation example above while monitoring the Heroku logs using `heroku logs --tail`. Once again in the Heroku debug logs you will see the above error. This is because your user does not have access to the `DiscountOverride__c` field - as per our scenario, this is a valid use case.
 
-In order to elevate just the permissions of your code to access this field and not that of the user, an additional **Permission Set** is needed. This Permission Set contains only additional permissions the code needs - in this case access to the `DiscountOverride__c` field. The following command deploys a permission set called `GenerateQuoteAuthorization` that contains this permission. Note this permission set is defined as requiring session activation to be active, this temporary activation is handled by the Heorku Integration add-on for you. However it must still be assigned to a user and must following the naming convention of `[yourapplication]Authorization` for the **Heroku Integration** add-on to detect it.
+In order to elevate just the permissions of your code to access this field and not that of the user, an additional **Permission Set** is needed. This Permission Set contains only additional permissions the code needs - in this case access to the `DiscountOverride__c` field. The following command deploys an update to a permission set called `GenerateQuotePermissions` that contains this permission. Note this permission set, was created by the above `publish` command and is defined as requiring session activation to be active, this temporary activation is handled by the Heorku AppLink add-on for you. However, it must still be assigned to applicable users.
 
 ```
 sf project deploy start --metadata PermissionSet -o my-org
-sf org assign permset --name GenerateQuoteAuthorization -o my-org
+sf org assign permset --name GenerateQuotePermissions -o my-org
 ```
 
-Now that this has been deployed, the **Heroku Integration** add-on automatically detects it and adds it to the users own permissions while executing the code - hence permissions are now elevated. To test this rerun the code using Apex invocation examples above and you should now find that a **Quote** has been successfully created as evident from the console output per the example below.
+Now that it has been updated, the **Heroku AppLink** add-on uses it to adds it to the users own permissions while executing the code - hence permissions are now elevated. To test this rerun the code using Apex invocation examples above and you should now find that a **Quote** has been successfully created as evident from the console output per the example below.
 
 ```
 07:56:11.212 (3213672014)|USER_DEBUG|[1]|DEBUG|Quote Id: 0Q0am000000nRS5CAM
