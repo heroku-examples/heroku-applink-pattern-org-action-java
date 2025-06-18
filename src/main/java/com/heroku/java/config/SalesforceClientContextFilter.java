@@ -38,7 +38,7 @@ public class SalesforceClientContextFilter extends OncePerRequestFilter {
             // Extract fields to hydrate a UserContext and WSC PartnerConnection on the request
             String accessToken = clientContextNode.get("accessToken").asText();
             String apiVersion = clientContextNode.get("apiVersion").asText();
-            String requestId = clientContextNode.get("requestId").asText();
+            String requestId = null; // clientContextNode.get("requestId").asText();
             String namespace = clientContextNode.get("namespace").asText();
             String orgId = clientContextNode.get("orgId").asText();
             String orgDomainUrl = clientContextNode.get("orgDomainUrl").asText();
