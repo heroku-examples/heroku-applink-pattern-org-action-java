@@ -50,7 +50,7 @@ Next install and configure the Heroku Integration add-on:
 
 ```
 heroku create
-heroku addons:create heroku-applink
+heroku addons:create heroku-applink --wait
 heroku buildpacks:add --index=1 heroku/heroku-applink-service-mesh
 heroku buildpacks:add heroku/java
 heroku config:set HEROKU_APP_ID="$(heroku apps:info --json | jq -r '.app.id')"
@@ -59,7 +59,7 @@ heroku salesforce:connect my-org
 heroku salesforce:publish api-docs.yaml --client-name GenerateQuote --connection-name my-org --authorization-connected-app-name GenerateQuoteConnectedApp --authorization-permission-set-name GenerateQuotePermissions
 ```
 
-Once imported grant permissions to users to invoke your code using the following `sf` command:
+Once imported grant permissions to users to invoke your code using the following `sf` commands:
 
 ```
 sf org assign permset --name GenerateQuote -o my-org
