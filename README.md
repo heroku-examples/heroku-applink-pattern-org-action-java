@@ -12,12 +12,10 @@ The scenario used in this sample illustrates a basis for performing complex comp
 
 # Requirements
 - Heroku login
-- Heroku Integration Pilot enabled
 - Heroku CLI installed
-- Heroku Integration Pilot CLI plugin is installed
+- Heroku AppLink CLI plugin installed
 - Salesforce CLI installed
 - Login information for one or more Scratch, Development or Sandbox orgs
-- Watch the [Introduction to the Heroku Integration Pilot for Developers](https://www.youtube.com/watch?v=T5kOGNuTCLE) video 
 
 ## Local Development and Testing
 
@@ -78,27 +76,21 @@ Navigate to your orgs **Setup** menu and search for **Heroku** then click **Apps
 
 ### Invoking from Apex
 
-Now that you have imported your Heroku application. The following shows an Apex code fragment the demonstrates how to invoke your code in an synchronous manner (waits for response). Make sure to change the **Opportunity Id** `006am000006pS6P` below to a valid **Opportunity** from your org (see above).
+Now that you have imported your Heroku application. The following shows an Apex code execution that demonstrates how to invoke your code in an synchronous manner (waits for response). Make sure to change the **Opportunity Id** `006am000006pS6P` in the `./src-apex/GenerateQuote.apex` file to a valid **Opportunity** from your org (see above).
 
 ```
-echo \
-"HerokuAppLink.GenerateQuote service = new HerokuAppLink.GenerateQuote();" \
-"HerokuAppLink.GenerateQuote.generateQuote_Request request = new HerokuAppLink.GenerateQuote.generateQuote_Request();" \
-"HerokuAppLink.GenerateQuote_QuoteGenerationRequest body = new HerokuAppLink.GenerateQuote_QuoteGenerationRequest();" \
-"body.opportunityId = '006SB00000DETNg';" \
-"request.body = body;" \
-"System.debug('Quote Id: ' + service.generateQuote(request).Code200.quoteId);" \
-| sf apex run -o my-org
+sf apex run < ./src-apex/GenerateQuote.apex
 ```
 
+The Apex code looks like this:
+
 ```
-echo \
-"HerokuAppLink.GenerateQuote service = new HerokuAppLink.GenerateQuote();" \
-"HerokuAppLink.GenerateQuote.generateQuote_Request request = new HerokuAppLink.GenerateQuote.generateQuote_Request();" \
-"HerokuAppLink.GenerateQuote_QuoteGenerationRequest body = new HerokuAppLink.GenerateQuote_QuoteGenerationRequest();" \
-"request.body = body;" \
-"System.debug('Quote Id: ' + service.generateQuote(request));" \
-| sf apex run -o my-ga-test-org2
+HerokuAppLink.GenerateQuote service = new HerokuAppLink.GenerateQuote();
+HerokuAppLink.GenerateQuote.generateQuote_Request request = new HerokuAppLink.GenerateQuote.generateQuote_Request();
+HerokuAppLink.GenerateQuote_QuoteGenerationRequest body = new HerokuAppLink.GenerateQuote_QuoteGenerationRequest();
+body.opportunityId = '006SB00000DItEfYAL';
+request.body = body;
+System.debug('Quote Id: ' + service.generateQuote(request).Code200.quoteId);
 ```
 
 Inspect the debug log output sent to to the console and you should see the generated Quote ID output as follows:
@@ -165,10 +157,10 @@ Now that it has been updated, the **Heroku AppLink** add-on uses it to adds it t
 When running developing and testing locally the `invoke.sh` can take a third argument to emulate the above deployed behavior. Also note that at time of writing, during the Pilot, **Flow** and **Agentforce** invocation with elevated permissions is not supported and returns an error.
 
 > [!NOTE]
-> Your developer user needs permissions to assign session based permission sets required by the `invoke.sh` script. Before running the above command assign this permission using `sf org assign permset --name GenerateQuoteAuthorization -o my-org`. You need only run it once. 
+> Your developer user needs permissions to assign session based permission sets required by the `invoke.sh` script. Before running the above command assign this permission using `sf org assign permset --name GenerateQuoteDeveloper -o my-org`. You need only run it once. 
 
 ```
-./bin/invoke.sh my-org '{"opportunityId": "006am000006pS6P"}' GenerateQuoteAuthorization
+./bin/invoke.sh my-org '{"opportunityId": "006am000006pS6P"}' GenerateQuotePermissions
 ```
 
 The above `invoke.sh` now outputs additional information confirming the elevation:

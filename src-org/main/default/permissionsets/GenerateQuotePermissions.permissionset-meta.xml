@@ -6,5 +6,5 @@
         <readable>true</readable>
     </fieldPermissions>
     <hasActivationRequired>true</hasActivationRequired>
-    <label>Generate Quote Authorizations</label>
+    <label>Generate Quote Permissions</label>
 </PermissionSet>
