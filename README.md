@@ -54,7 +54,6 @@ heroku addons:create heroku-applink --wait
 heroku buildpacks:add --index=1 heroku/heroku-applink-service-mesh
 heroku buildpacks:add heroku/java
 heroku config:set HEROKU_APP_ID="$(heroku apps:info --json | jq -r '.app.id')"
-git push heroku main
 heroku salesforce:connect my-org
 heroku salesforce:publish api-docs.yaml --client-name GenerateQuote --connection-name my-org --authorization-connected-app-name GenerateQuoteConnectedApp --authorization-permission-set-name GenerateQuotePermissions
 ```
