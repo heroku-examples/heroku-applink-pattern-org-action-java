@@ -1,8 +1,5 @@
-Heroku Integration - Extending Apex, Flow and Agentforce - Java
-===============================================================
-
-> [!IMPORTANT]
-> For use with the Heroku Integration and Heroku Eventing pilots only
+Heroku AppLink - Extending Apex, Flow and Agentforce - Java
+===========================================================
 
 This sample demonstrates importing a Heroku application into an org to enable Apex, Flow, and Agentforce to call out to Heroku. For Apex, both synchronous and asynchronous invocation are demonstrated, along with securely elevating Salesforce permissions for processing that requires additional object or field access.
 
@@ -15,12 +12,10 @@ The scenario used in this sample illustrates a basis for performing complex comp
 
 # Requirements
 - Heroku login
-- Heroku Integration Pilot enabled
 - Heroku CLI installed
-- Heroku Integration Pilot CLI plugin is installed
+- Heroku AppLink CLI plugin installed
 - Salesforce CLI installed
 - Login information for one or more Scratch, Development or Sandbox orgs
-- Watch the [Introduction to the Heroku Integration Pilot for Developers](https://www.youtube.com/watch?v=T5kOGNuTCLE) video 
 
 ## Local Development and Testing
 
@@ -51,31 +46,23 @@ You can now also view the **Quote** by refreshing the **Opportunity** page withi
 
 To test from Apex, Flow and other tools within your Salesforce org you must deploy the code and import it into your org. The following commands create a Heroku application and configure the Heroku Integration add-on. This add-on and associated buildpack allows secure authenticated access from within your code and visibility of your code from Apex, Flow and Agentforce. After this configuration, code is not accessible from the public internet, only from within an authorized Salesforce org.
 
-```
-heroku create
-git push heroku main
-```
-
 Next install and configure the Heroku Integration add-on:
 
 ```
-heroku addons:create heroku-integration
-heroku buildpacks:add https://github.com/heroku/heroku-buildpack-heroku-integration-service-mesh
-heroku salesforce:connect my-org --store-as-run-as-user
-heroku salesforce:import api-docs.yaml --org-name my-org --client-name GenerateQuote
+heroku create
+heroku addons:create heroku-applink --wait
+heroku buildpacks:add --index=1 heroku/heroku-applink-service-mesh
+heroku buildpacks:add heroku/java
+heroku config:set HEROKU_APP_ID="$(heroku apps:info --json | jq -r '.app.id')"
+heroku salesforce:connect my-org
+heroku salesforce:publish api-docs.yaml --client-name GenerateQuote --connection-name my-org --authorization-connected-app-name GenerateQuoteConnectedApp --authorization-permission-set-name GenerateQuotePermissions
 ```
 
-Trigger an application rebuild to install the Heroku Integration buildpack
-
-```
-git commit --allow-empty -m "empty commit"
-git push heroku main
-```
-
-Once imported grant permissions to users to invoke your code using the following `sf` command:
+Once imported grant permissions to users to invoke your code using the following `sf` commands:
 
 ```
 sf org assign permset --name GenerateQuote -o my-org
+sf org assign permset --name GenerateQuotePermissions -o my-org
 ```
 
 Deploy the Heroku application and confirm it has started.
@@ -89,17 +76,21 @@ Navigate to your orgs **Setup** menu and search for **Heroku** then click **Apps
 
 ### Invoking from Apex
 
-Now that you have imported your Heroku application. The following shows an Apex code fragment the demonstrates how to invoke your code in an synchronous manner (waits for response). Make sure to change the **Opportunity Id** `006am000006pS6P` below to a valid **Opportunity** from your org (see above).
+Now that you have imported your Heroku application. The following shows an Apex code execution that demonstrates how to invoke your code in an synchronous manner (waits for response). Make sure to change the **Opportunity Id** `006am000006pS6P` in the `./src-apex/GenerateQuote.apex` file to a valid **Opportunity** from your org (see above).
 
 ```
-echo \
-"ExternalService.GenerateQuote service = new ExternalService.GenerateQuote();" \
-"ExternalService.GenerateQuote.generateQuote_Request request = new ExternalService.GenerateQuote.generateQuote_Request();" \
-"ExternalService.GenerateQuote_QuoteGenerationRequest body = new ExternalService.GenerateQuote_QuoteGenerationRequest();" \
-"body.opportunityId = '006am000006pS6P';" \
-"request.body = body;" \
-"System.debug('Quote Id: ' + service.generateQuote(request).Code200.quoteId);" \
-| sf apex run -o my-org
+sf apex run < ./src-apex/GenerateQuote.apex
+```
+
+The Apex code looks like this:
+
+```
+HerokuAppLink.GenerateQuote service = new HerokuAppLink.GenerateQuote();
+HerokuAppLink.GenerateQuote.generateQuote_Request request = new HerokuAppLink.GenerateQuote.generateQuote_Request();
+HerokuAppLink.GenerateQuote_QuoteGenerationRequest body = new HerokuAppLink.GenerateQuote_QuoteGenerationRequest();
+body.opportunityId = '006SB00000DItEfYAL';
+request.body = body;
+System.debug('Quote Id: ' + service.generateQuote(request).Code200.quoteId);
 ```
 
 Inspect the debug log output sent to to the console and you should see the generated Quote ID output as follows:
@@ -150,26 +141,25 @@ No such column 'DiscountOverride__c' on entity 'OpportunityLineItem'. If you are
 
 Replicate this situation with your deployed code, by enabling discount overrides using `heroku config:set ENABLE_DISCOUNT_OVERRIDES=True`. Retry with the Apex invocation example above while monitoring the Heroku logs using `heroku logs --tail`. Once again in the Heroku debug logs you will see the above error. This is because your user does not have access to the `DiscountOverride__c` field - as per our scenario, this is a valid use case.
 
-In order to elevate just the permissions of your code to access this field and not that of the user, an additional **Permission Set** is needed. This Permission Set contains only additional permissions the code needs - in this case access to the `DiscountOverride__c` field. The following command deploys a permission set called `GenerateQuoteAuthorization` that contains this permission. Note this permission set is defined as requiring session activation to be active, this temporary activation is handled by the Heorku Integration add-on for you. However it must still be assigned to a user and must following the naming convention of `[yourapplication]Authorization` for the **Heroku Integration** add-on to detect it.
+In order to elevate just the permissions of your code to access this field and not that of the user, an additional **Permission Set** is needed. This Permission Set contains only additional permissions the code needs - in this case access to the `DiscountOverride__c` field. The following command deploys an update to a permission set called `GenerateQuotePermissions` that contains this permission. Note this permission set, was created by the above `publish` command and is defined as requiring session activation to be active, this temporary activation is handled by the Heorku AppLink add-on for you. However, it must still be assigned to applicable users (per above deployment steps).
 
 ```
 sf project deploy start --metadata PermissionSet -o my-org
-sf org assign permset --name GenerateQuoteAuthorization -o my-org
 ```
 
-Now that this has been deployed, the **Heroku Integration** add-on automatically detects it and adds it to the users own permissions while executing the code - hence permissions are now elevated. To test this rerun the code using Apex invocation examples above and you should now find that a **Quote** has been successfully created as evident from the console output per the example below.
+Now that it has been updated, the **Heroku AppLink** add-on uses to add to the users own permissions while executing the code - hence permissions are now elevated. To test this rerun the code using Apex invocation examples above and you should now find that a **Quote** has been successfully created as evident from the console output per the example below.
 
 ```
 07:56:11.212 (3213672014)|USER_DEBUG|[1]|DEBUG|Quote Id: 0Q0am000000nRS5CAM
 ```
 
-When running developing and testing locally the `invoke.sh` can take a third argument to emulate the above deployed behavior. Also note that at time of writing, during the Pilot, **Flow** and **Agentforce** invocation with elevated permissions is not supported and returns an error.
+When running developing and testing locally the `invoke.sh` can take a third argument to emulate the above deployed behavior.
 
 > [!NOTE]
-> Your developer user needs permissions to assign session based permission sets required by the `invoke.sh` script. Before running the above command assign this permission using `sf org assign permset --name GenerateQuoteAuthorization -o my-org`. You need only run it once. 
+> Your developer user needs permissions to assign session based permission sets required by the `invoke.sh` script. Before running the above command assign this permission using `sf org assign permset --name GenerateQuoteDeveloper -o my-org`. You need only run it once. 
 
 ```
-./bin/invoke.sh my-org '{"opportunityId": "006am000006pS6P"}' GenerateQuoteAuthorization
+./bin/invoke.sh my-org '{"opportunityId": "006am000006pS6P"}' GenerateQuotePermissions
 ```
 
 The above `invoke.sh` now outputs additional information confirming the elevation:
@@ -185,9 +175,10 @@ Session-based permission set deactivated successfully.
 
 ## Invoking from Agentforce
 
-Consult the more in-depth Heroku and Agentforce Tutorial [here](https://github.com/heroku-examples/heroku-agentforce-tutorial/tree/heroku-integration-pilot). 
+Consult the more in-depth Heroku and Agentforce Tutorial [here](https://github.com/heroku-examples/heroku-agentforce-tutorial/tree/heroku-integration). 
 
 ## Technical Information
+- The Spring Boot class `OpenAPIConfig` has been used to inject additional Saleforce configuration for each operation exposed. This aligns with the names of the Connected App and Permission Sets used when using the `salesforce:publish` command above.
 - The pricing engine logic is implemented in the `PricingEngineSevice.java` source file, under the `/src` directory. It demonstrates how to query and insert records into Salesforce.
 - The `api-docs.yaml` file is not automatically refreshed. If you change the request or response of your code this needs to be updated before importing into Salesforce. To do this, when developing locally navigate to `http://localhost:8080/v3/api-docs.yaml` to download the latest generated version. It is feasible to automate this process with a shell script that wraps the `heroku salesforce:import` command to avoid maintaining this file.
 - At present this Java sample does not support asynchronous invocation, please consult the Node version for this.
@@ -202,5 +193,5 @@ Consult the more in-depth Heroku and Agentforce Tutorial [here](https://github.c
 | ------ | --------------- |
 | [Salesforce API Access - Java](https://github.com/heroku-examples/heroku-integration-pattern-api-access-java) | This sample application showcases how to extend a Heroku web application by integrating it with Salesforce APIs, enabling seamless data exchange and automation across multiple connected Salesforce orgs. It also includes a demonstration of the Salesforce Bulk API, which is optimized for handling large data volumes efficiently. |
 | [Extending Apex, Flow and Agentforce - Java](https://github.com/heroku-examples/heroku-integration-pattern-org-action-java) | This sample demonstrates importing a Heroku application into an org to enable Apex, Flow, and Agentforce to call out to Heroku. For Apex, both synchronous and asynchronous invocation are demonstrated, along with securely elevating Salesforce permissions for processing that requires additional object or field access. |
-| [Scaling Batch Jobs with Heroku - Java](https://github.com/heroku-examples/heroku-integration-pattern-org-job-java) | This sample seamlessly delegates the processing of large amounts of data with significant compute requirements to Heroku Worker processes. It also demonstrates the use of the Unit of Work aspect of the SDK (JavaScript only for the pilot) for easier utilization of the Salesforce Composite APIs. |
+| [Scaling Batch Jobs with Heroku - Java](https://github.com/heroku-examples/heroku-integration-pattern-org-job-java) | This sample seamlessly delegates the processing of large amounts of data with significant compute requirements to Heroku Worker processes. |
 | [Using Eventing to drive Automation and Communication](https://github.com/heroku-examples/heroku-integration-pattern-eventing-java) | This sample extends the batch job sample by adding the ability to use eventing to start the work and notify users once it completes using Custom Notifications. These notifications are sent to the user's desktop or mobile device running Salesforce Mobile. Flow is used in this sample to demonstrate how processing can be handed off to low-code tools such as Flow. |

@@ -30,6 +30,11 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/QuoteGenerationResponse"
+      x-sfdc:
+        heroku:
+          authorization:
+            connectedApp: GenerateQuoteConnectedApp
+            permissionSet: GenerateQuotePermissions
 components:
   schemas:
     QuoteGenerationRequest:
